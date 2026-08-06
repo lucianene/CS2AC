@@ -447,8 +447,8 @@ void utils::AnnounceWatermarkTo(CPlayerSlot slot, bool centerOnly)
 			}
 		};
 		printChat(localization::Watermark({{"author", "{grey}%s1{default}"}}).localized, "karola3vax");
-		printChat(localization::Format("announcement.support", "CS2AC is free and independently maintained. Support continued updates: {url}",
-									   {{"url", "https://buymeacoffee.com/karola3vax"}})
+		printChat(localization::Format("announcement.support", "Support the hard work behind this free protection: {url}",
+									   {{"url", "buymeacoffee.com/karola3vax"}})
 					  .localized);
 		return;
 	}

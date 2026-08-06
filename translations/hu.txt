@@ -1,6 +1,6 @@
 "Phrases"
 {
-	"announcement.support"	"A CS2AC ingyenes és függetlenül karbantartott. Támogasd a további frissítéseket: {url}"
+	"announcement.support"	"Támogasd az ingyenes védelem mögött álló kemény munkát: {url}"
 	"announcement.detected"	"{detection} észlelve {player} játékosnál{outcome}"
 	"announcement.outcome.punishment_sent"	", a büntetés végrehajtva."
 	"announcement.outcome.whitelisted"	", de a játékos fehérlistán van."

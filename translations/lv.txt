@@ -1,6 +1,6 @@
 "Phrases"
 {
-	"announcement.support"	"CS2AC ir bezmaksas un tiek neatkarīgi uzturēts. Atbalstiet turpmākus atjauninājumus: {url}"
+	"announcement.support"	"Atbalstiet smago darbu, kas nodrošina šo bezmaksas aizsardzību: {url}"
 	"announcement.detected"	"konstatēja {detection} spēlētājam {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" un izpildīja sodu."
 	"announcement.outcome.whitelisted"	", bet spēlētājs ir baltajā sarakstā."

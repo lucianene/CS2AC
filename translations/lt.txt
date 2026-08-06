@@ -1,6 +1,6 @@
 "Phrases"
 {
-	"announcement.support"	"CS2AC yra nemokamas ir nepriklausomai prižiūrimas. Paremkite tolesnius atnaujinimus: {url}"
+	"announcement.support"	"Paremkite sunkų darbą, kuriuo kuriama ši nemokama apsauga: {url}"
 	"announcement.detected"	"aptiko {detection} pas žaidėją {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" ir pritaikė bausmę."
 	"announcement.outcome.whitelisted"	", bet žaidėjas yra baltajame sąraše."

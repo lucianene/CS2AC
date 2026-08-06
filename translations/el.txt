@@ -1,6 +1,6 @@
 "Phrases"
 {
-	"announcement.support"	"Το CS2AC είναι δωρεάν και συντηρείται ανεξάρτητα. Υποστηρίξτε τις συνεχιζόμενες ενημερώσεις: {url}"
+	"announcement.support"	"Υποστηρίξτε τη σκληρή δουλειά πίσω από αυτή τη δωρεάν προστασία: {url}"
 	"announcement.detected"	"εντόπισε {detection} στον παίκτη {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" και εφάρμοσε την ποινή."
 	"announcement.outcome.whitelisted"	", αλλά ο παίκτης είναι στη λίστα εξαίρεσης."

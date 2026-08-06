@@ -1,6 +1,6 @@
 "Phrases"
 {
-	"announcement.support"	"CS2AC je bezplatný a nezávisle udržiavaný. Podporte ďalšie aktualizácie: {url}"
+	"announcement.support"	"Podporte tvrdú prácu za touto bezplatnou ochranou: {url}"
 	"announcement.detected"	"zistil {detection} u hráča {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" a vykonal trest."
 	"announcement.outcome.whitelisted"	", ale hráč je na bielej listine."
