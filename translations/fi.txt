@@ -1,5 +1,6 @@
 "Phrases"
 {
+	"announcement.support"	"CS2AC on ilmainen ja sitä ylläpidetään itsenäisesti. Tue jatkuvia päivityksiä: {url}"
 	"announcement.detected"	"havaitsi {detection}-toiminnan pelaajalla {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" ja suoritti rangaistuksen."
 	"announcement.outcome.whitelisted"	", mutta pelaaja on sallittujen listalla."

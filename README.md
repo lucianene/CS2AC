@@ -467,6 +467,10 @@ Run CS2AC on a real server. Test it, [send reproducible reports](https://github.
 
 If CS2AC earns a place on your server, star the repository and share your clips. That helps more server owners find it and gives the project better real-world feedback.
 
+## Support development
+
+CS2AC is free and independently maintained. If it helps your server, even a small one-time or monthly contribution helps me keep up with CS2 updates, testing, Windows and Linux builds, report investigation, and community support: [Support development](https://buymeacoffee.com/karola3vax).
+
 ## License
 
 CS2AC is free and open-source software licensed under the [GNU Affero General Public License v3.0](LICENSE). Dependencies keep their own licenses; see [Third-party notices](THIRD_PARTY_NOTICES.md).

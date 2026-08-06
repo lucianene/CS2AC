@@ -1,5 +1,6 @@
 "Phrases"
 {
+	"announcement.support"	"CS2AC مجاني وتتم صيانته بشكل مستقل. ادعم استمرار التحديثات: {url}"
 	"announcement.detected"	"اكتشف {detection} لدى اللاعب {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" ونفّذ العقوبة."
 	"announcement.outcome.whitelisted"	"، لكن اللاعب في القائمة البيضاء."

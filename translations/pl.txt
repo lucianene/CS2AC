@@ -1,5 +1,6 @@
 "Phrases"
 {
+	"announcement.support"	"CS2AC jest bezpłatny i niezależnie rozwijany. Wesprzyj dalsze aktualizacje: {url}"
 	"announcement.detected"	"wykrył {detection} u gracza {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" i zastosował karę."
 	"announcement.outcome.whitelisted"	", ale gracz jest na białej liście."

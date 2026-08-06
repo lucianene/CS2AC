@@ -1,5 +1,6 @@
 "Phrases"
 {
+	"announcement.support"	"CS2AC 免費且由獨立開發者維護。支持後續更新：{url}"
 	"announcement.detected"	"在玩家 {player} 身上偵測到 {detection}{outcome}"
 	"announcement.outcome.punishment_sent"	"，並已執行處罰。"
 	"announcement.outcome.whitelisted"	"，但該玩家在白名單中。"

@@ -1,5 +1,6 @@
 "Phrases"
 {
+	"announcement.support"	"CS2AC ücretsizdir ve bağımsız olarak geliştirilmektedir. Devam eden güncellemeleri destekleyin: {url}"
 	"announcement.detected"	"{player} üzerinde {detection} tespit etti{outcome}"
 	"announcement.outcome.punishment_sent"	" ve cezayı uyguladı."
 	"announcement.outcome.whitelisted"	", ancak oyuncu beyaz listede."

@@ -437,13 +437,19 @@ void utils::AnnounceWatermarkTo(CPlayerSlot slot, bool centerOnly)
 	CSingleRecipientFilter filter(slot);
 	if (!centerOnly)
 	{
-		const std::string chatBody = localization::Watermark({{"author", "{grey}%s1{default}"}}).localized;
-		const std::string chatTemplate = "{red}[CS2AC]{default} " + chatBody;
-		char coloredChat[256];
-		if (CFormat(coloredChat, sizeof(coloredChat), chatTemplate.c_str()))
+		const auto printChat = [&](const std::string &body, const char *param = "")
 		{
-			ClientPrintFilter(&filter, HUD_PRINTTALK, coloredChat, "karola3vax", "", "", "");
-		}
+			const std::string message = "{red}[CS2AC]{default} " + body;
+			char colored[256];
+			if (CFormat(colored, sizeof(colored), message.c_str()))
+			{
+				ClientPrintFilter(&filter, HUD_PRINTTALK, colored, param, "", "", "");
+			}
+		};
+		printChat(localization::Watermark({{"author", "{grey}%s1{default}"}}).localized, "karola3vax");
+		printChat(localization::Format("announcement.support", "CS2AC is free and independently maintained. Support continued updates: {url}",
+									   {{"url", "https://buymeacoffee.com/karola3vax"}})
+					  .localized);
 		return;
 	}
 
