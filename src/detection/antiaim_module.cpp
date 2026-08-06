@@ -73,6 +73,55 @@ namespace
 		}
 		return "a subtick angle delta is not finite";
 	}
+
+	localization::Text AntiAimCategory(detection::AntiAimEvidenceType type)
+	{
+		using Type = detection::AntiAimEvidenceType;
+		switch (type)
+		{
+			case Type::Spin:
+				return localization::Format("evidence.antiaim.category.spin", "sustained spinning");
+			case Type::Jitter:
+				return localization::Format("evidence.antiaim.category.jitter", "repeating aim jitter");
+			case Type::AttackReturn:
+				return localization::Format("evidence.antiaim.category.attack_return", "attack-return shots");
+			case Type::InconsistentCommand:
+				return localization::Format("evidence.antiaim.category.inconsistent_command", "broken angle commands");
+			case Type::HistoryMismatch:
+				return localization::Format("evidence.antiaim.category.history_mismatch", "conflicting command angles");
+			case Type::InvalidAngles:
+				return localization::Format("evidence.antiaim.category.invalid_angles", "angles outside the CS2 range");
+			case Type::Count:
+				break;
+		}
+		return {"unknown behavior", "unknown behavior"};
+	}
+
+	localization::Text EarlierAntiAimEvidence(const detection::AntiAimPlayerData &data, detection::AntiAimEvidenceType latestType, float latestWeight)
+	{
+		localization::Text result;
+		for (size_t index = 0; index < static_cast<size_t>(detection::AntiAimEvidenceType::Count); ++index)
+		{
+			const auto type = static_cast<detection::AntiAimEvidenceType>(index);
+			const int count = data.evidenceCounts[index] - static_cast<int>(type == latestType);
+			const float points = data.evidencePoints[index] - (type == latestType ? latestWeight : 0.0f);
+			if (count <= 0 || points <= 0.0f)
+			{
+				continue;
+			}
+			const auto category = AntiAimCategory(type);
+			auto entry = [&](const std::string &name)
+			{
+				return localization::Format("evidence.antiaim.category_entry", "{category}: {count}x (+{points})",
+											{{"category", name}, {"count", tfm::format("%d", count)}, {"points", tfm::format("%.0f", points)}});
+			};
+			const auto english = entry(category.english);
+			const auto localized = entry(category.localized);
+			const char *separator = result.english.empty() ? "" : ", ";
+			result = {result.english + separator + english.english, result.localized + separator + localized.localized};
+		}
+		return result;
+	}
 } // namespace
 
 namespace detection
@@ -128,6 +177,11 @@ namespace detection
 		data.score = (std::max)(0.0f, data.score - elapsed * scoreDecayPerSecond);
 		data.mismatchScore = (std::max)(0.0f, data.mismatchScore - elapsed * mismatchScoreDecayPerSecond);
 		const float total = data.score + data.mismatchScore;
+		if (total <= 0.0f)
+		{
+			data.evidenceCounts = {};
+			data.evidencePoints = {};
+		}
 		int after = static_cast<int>(std::ceil(total - 0.0001f));
 		if (player && after < before)
 		{
@@ -136,14 +190,18 @@ namespace detection
 		}
 	}
 
-	void AntiAimModule::AddEvidence(MovementPlayer *player, AntiAimPlayerData &data, float weight, const char *reasonKey, const char *reason,
-									bool continuous, bool mismatch)
+	void AntiAimModule::AddEvidence(MovementPlayer *player, AntiAimPlayerData &data, AntiAimEvidenceType type, float weight, const char *reasonKey,
+									const char *reason, bool continuous, bool mismatch)
 	{
 		if (!player || data.suppressContinuous)
 		{
 			return;
 		}
 		ApplyDecay(player, data);
+		const float previousTotal = data.score + data.mismatchScore;
+		const size_t typeIndex = static_cast<size_t>(type);
+		++data.evidenceCounts[typeIndex];
+		data.evidencePoints[typeIndex] += weight;
 		(mismatch ? data.mismatchScore : data.score) += weight;
 		const float total = data.score + data.mismatchScore;
 		ANTIAIM_DEBUG("%s added %.1f for %s; score %.1f/%.0f (regular %.1f, mismatch %.1f).\n", player->GetName(), weight, reason, total,
@@ -172,18 +230,28 @@ namespace detection
 		if (callback)
 		{
 			const std::string localizedReason = localization::Get(reasonKey, reason);
-			localization::Text details {
-				tfm::format("The final piece of evidence was %s. It added %.1f points, bringing the combined AntiAim score to %.1f/%.0f.", reason,
-							weight, total, detectionThreshold),
-				localization::Format("evidence.antiaim",
-									 "The final piece of evidence was {reason}. It added {points} points, bringing the combined AntiAim score to "
-									 "{score}/{threshold}.",
-									 {{"reason", localizedReason},
-									  {"points", tfm::format("%.1f", weight)},
-									  {"score", tfm::format("%.1f", total)},
-									  {"threshold", tfm::format("%.0f", detectionThreshold)}})
-					.localized,
+			const auto earlier = EarlierAntiAimEvidence(data, type, weight);
+			auto formatDetails = [&](const std::string &earlierText, const std::string &latestReason)
+			{
+				const localization::Arguments values {{"earlier", earlierText},
+													  {"remaining", tfm::format("%.1f", previousTotal)},
+													  {"reason", latestReason},
+													  {"points", tfm::format("%.1f", weight)},
+													  {"score", tfm::format("%.1f", total)},
+													  {"threshold", tfm::format("%.0f", detectionThreshold)}};
+				return previousTotal > 0.05f
+						   ? localization::Format(
+								 "evidence.antiaim",
+								 "Earlier AntiAim behavior: {earlier}. After normal decay, {remaining} points remained. Latest: {reason}, adding "
+								 "{points} points. Score: {score}/{threshold}.",
+								 values)
+						   : localization::Format("evidence.antiaim.single",
+												  "The detector found {reason}. This added {points} points by itself. Score: {score}/{threshold}.",
+												  values);
 			};
+			const auto englishDetails = formatDetails(earlier.english, reason);
+			const auto localizedDetails = formatDetails(earlier.localized, localizedReason);
+			localization::Text details {englishDetails.english, localizedDetails.localized};
 			// m_yaw is evidence-only context for reviewing high-value turn binds; it never changes the score or punishment.
 			const char *mYaw = interfaces::pEngine ? interfaces::pEngine->GetClientConVarValue(player->GetPlayerSlot(), "m_yaw") : nullptr;
 			if (utils::IsNumeric(mYaw))
@@ -196,6 +264,8 @@ namespace detection
 		}
 		data.score = 0.0f;
 		data.mismatchScore = 0.0f;
+		data.evidenceCounts = {};
+		data.evidencePoints = {};
 		data.scoreTime = std::chrono::steady_clock::now();
 		data.suppressContinuous = continuous;
 		if (networkVetoed)
@@ -409,7 +479,7 @@ namespace detection
 		}
 		if (spinDetected && !data.suppressContinuous)
 		{
-			AddEvidence(player, data, detectionThreshold, "evidence.antiaim.reason.spin",
+			AddEvidence(player, data, AntiAimEvidenceType::Spin, detectionThreshold, "evidence.antiaim.reason.spin",
 						"continuous spinning at a speed and consistency associated with AntiAim", true);
 			data.spinActive = true;
 		}
@@ -489,8 +559,8 @@ namespace detection
 		}
 		if (data.jitterSeconds >= requiredJitterSeconds && !data.suppressContinuous)
 		{
-			AddEvidence(player, data, detectionThreshold, "evidence.antiaim.reason.jitter", "the same rapid view-angle jitter repeating continuously",
-						true);
+			AddEvidence(player, data, AntiAimEvidenceType::Jitter, detectionThreshold, "evidence.antiaim.reason.jitter",
+						"the same rapid view-angle jitter repeating continuously", true);
 			data.jitterActive = true;
 		}
 		else if (!jitterEpisodeActive)
@@ -554,7 +624,7 @@ namespace detection
 					  shot->subtickYaw);
 		if (std::isfinite(surrounding) && std::isfinite(snap) && surrounding < 10.0f && snap > minimumAttackReturnAngle && snap > surrounding * 5.0f)
 		{
-			AddEvidence(player, data, 20.0f, "evidence.antiaim.reason.attack_return",
+			AddEvidence(player, data, AntiAimEvidenceType::AttackReturn, 20.0f, "evidence.antiaim.reason.attack_return",
 						"a shot where the aim changed by at least 30 degrees for one command and immediately returned", false);
 		}
 		else
@@ -619,8 +689,8 @@ namespace detection
 		if (found->problems != 0 && !data.suppressContinuous)
 		{
 			ANTIAIM_DEBUG("%s command %d is inconsistent: %s.\n", player->GetName(), found->commandNumber, ProblemName(found->problems));
-			AddEvidence(player, data, 1.0f, "evidence.antiaim.reason.inconsistent_command", "view-angle data that a normal client should not send",
-						true);
+			AddEvidence(player, data, AntiAimEvidenceType::InconsistentCommand, 1.0f, "evidence.antiaim.reason.inconsistent_command",
+						"view-angle data that a normal client should not send", true);
 		}
 		else if (historyMismatch && !data.suppressContinuous
 				 && (data.lastMismatchEvidenceCommand < 0
@@ -630,7 +700,7 @@ namespace detection
 			ANTIAIM_DEBUG("%s command %d base/input-history yaw mismatch is %.2f degrees.\n", player->GetName(), found->commandNumber,
 						  found->historyYawDifference);
 			// Fast legitimate mouse movement can create this difference, so it contributes only short-lived supporting evidence.
-			AddEvidence(player, data, 1.0f, "evidence.antiaim.reason.history_mismatch",
+			AddEvidence(player, data, AntiAimEvidenceType::HistoryMismatch, 1.0f, "evidence.antiaim.reason.history_mismatch",
 						"two view angles in the same command repeatedly disagreeing by at least 120 degrees", true, true);
 		}
 		else if (!data.inconsistencyActive && wasInconsistent)
@@ -645,7 +715,8 @@ namespace detection
 		{
 			ANTIAIM_DEBUG("%s command %d has invalid pitch/roll %.2f/%.2f.\n", player->GetName(), found->commandNumber, found->baseAngles.x,
 						  found->baseAngles.z);
-			AddEvidence(player, data, 2.0f, "evidence.antiaim.reason.invalid_angles", "a pitch or roll angle outside the normal CS2 range", true);
+			AddEvidence(player, data, AntiAimEvidenceType::InvalidAngles, 2.0f, "evidence.antiaim.reason.invalid_angles",
+						"a pitch or roll angle outside the normal CS2 range", true);
 		}
 
 		EvaluateMotion(player, data, *found);

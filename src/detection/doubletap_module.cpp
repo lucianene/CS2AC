@@ -90,6 +90,12 @@ namespace detection
 
 		previous.serverTick = currentTick;
 		const int incidents = ++previous.incidents;
+		const auto now = Clock::now();
+		if (incidents == 1)
+		{
+			previous.firstIncidentTicks = static_cast<int>(delta);
+			previous.firstIncidentTime = now;
+		}
 		NetworkSafetyEvidence network;
 		if (networkSafety)
 		{
@@ -115,7 +121,11 @@ namespace detection
 		{
 			return;
 		}
+		const int firstTicks = previous.firstIncidentTicks;
+		const float elapsedSeconds = std::chrono::duration<float>(now - previous.firstIncidentTime).count();
 		previous.incidents = 0;
+		previous.firstIncidentTicks = -1;
+		previous.firstIncidentTime = {};
 
 		const auto networkEvidence = previous.networkEvidence;
 		previous.networkEvidence = {};
@@ -125,9 +135,12 @@ namespace detection
 			{
 				const auto details = localization::Format(
 					"evidence.doubletap.network_unstable",
-					"The same gun fired twice almost at once on {pairs} separate occasions. The latest pair was {ticks} "
-					"server ticks apart.",
-					{{"pairs", tfm::format("%d", detectionThreshold)}, {"ticks", tfm::format("%lld", static_cast<long long>(delta))}});
+					"During this connection, the same gun fired twice faster than its normal cycle on {pairs} separate occasions. The first "
+					"pair was {first_ticks} server ticks apart, the latest was {latest_ticks}, and the incidents happened {elapsed} seconds apart.",
+					{{"pairs", tfm::format("%d", detectionThreshold)},
+					 {"first_ticks", tfm::format("%d", firstTicks)},
+					 {"latest_ticks", tfm::format("%lld", static_cast<long long>(delta))},
+					 {"elapsed", tfm::format("%.1f", elapsedSeconds)}});
 				announceNetworkVeto("DOUBLETAP", player, AddNetworkSafetyDetails(details, networkEvidence));
 			}
 			return;
@@ -138,11 +151,13 @@ namespace detection
 			announce("DOUBLETAP", player,
 					 localization::Format(
 						 delta == 1 ? "evidence.doubletap.one_tick" : "evidence.doubletap.zero_ticks",
-						 delta == 1 ? "The same gun fired twice within 1 server tick on {pairs} separate occasions. That is faster than the "
-									  "weapon's normal firing cycle allows."
-									: "The same gun fired twice within the same server tick on {pairs} separate occasions. That is faster than "
-									  "the weapon's normal firing cycle allows.",
-						 {{"pairs", tfm::format("%d", detectionThreshold)}}));
+						 "During this connection, the same gun fired twice faster than its normal cycle on {pairs} separate occasions. The "
+						 "first pair was {first_ticks} server ticks apart, the latest was {latest_ticks}, and the incidents happened {elapsed} "
+						 "seconds apart.",
+						 {{"pairs", tfm::format("%d", detectionThreshold)},
+						  {"first_ticks", tfm::format("%d", firstTicks)},
+						  {"latest_ticks", tfm::format("%lld", static_cast<long long>(delta))},
+						  {"elapsed", tfm::format("%.1f", elapsedSeconds)}}));
 		}
 	}
 

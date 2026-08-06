@@ -202,6 +202,8 @@ namespace detection
 	{
 		int serverTick {-1};
 		int incidents {};
+		int firstIncidentTicks {-1};
+		Clock::time_point firstIncidentTime;
 		std::string weapon;
 		NetworkSafetyEvidence networkEvidence;
 	};
@@ -286,6 +288,7 @@ namespace detection
 	{
 		Clock::time_point time;
 		int points {};
+		int originalPoints {};
 	};
 
 	// Detects damaging shots whose attack-history angle disagrees with the command's base view angle.
@@ -327,6 +330,12 @@ namespace detection
 		bool hasCountedIncident {};
 	};
 
+	struct AimbotIncident
+	{
+		Clock::time_point time;
+		bool snapReturn {};
+	};
+
 	// Detects damaging command-angle snaps that rapidly converge on an enemy.
 	class AimbotModule
 	{
@@ -346,8 +355,8 @@ namespace detection
 		AnnounceCallback announce {};
 		ShotCorrelator *shots {};
 		std::array<AimbotPlayerData, MAXPLAYERS + 1> playerData;
-		std::array<std::deque<Clock::time_point>, MAXPLAYERS + 1> snapEvidence;
-		std::array<std::deque<Clock::time_point>, MAXPLAYERS + 1> smoothEvidence;
+		std::array<std::deque<AimbotIncident>, MAXPLAYERS + 1> snapEvidence;
+		std::array<std::deque<AimbotIncident>, MAXPLAYERS + 1> smoothEvidence;
 	};
 
 	struct AimlockSample
@@ -445,6 +454,17 @@ namespace detection
 		bool simulated {};
 	};
 
+	enum class AntiAimEvidenceType : std::uint8_t
+	{
+		Spin,
+		Jitter,
+		AttackReturn,
+		InconsistentCommand,
+		HistoryMismatch,
+		InvalidAngles,
+		Count,
+	};
+
 	struct AntiAimPlayerData
 	{
 		std::deque<AntiAimCommand> commands;
@@ -455,6 +475,8 @@ namespace detection
 		std::array<float, 3> spinBreakSeconds;
 		float jitterSeconds {};
 		float jitterBreakSeconds {};
+		std::array<int, static_cast<size_t>(AntiAimEvidenceType::Count)> evidenceCounts;
+		std::array<float, static_cast<size_t>(AntiAimEvidenceType::Count)> evidencePoints;
 		int pendingShot {-1};
 		int pendingShotTick {-1};
 		int spinDebugBucket {-1};
@@ -484,8 +506,8 @@ namespace detection
 		void OnClientDisconnect(MovementPlayer *player);
 
 	private:
-		void AddEvidence(MovementPlayer *player, AntiAimPlayerData &data, float weight, const char *reasonKey, const char *reason, bool continuous,
-						 bool mismatch = false);
+		void AddEvidence(MovementPlayer *player, AntiAimPlayerData &data, AntiAimEvidenceType type, float weight, const char *reasonKey,
+						 const char *reason, bool continuous, bool mismatch = false);
 		void ApplyDecay(MovementPlayer *player, AntiAimPlayerData &data);
 		void EvaluateMotion(MovementPlayer *player, AntiAimPlayerData &data, AntiAimCommand &command);
 		void EvaluatePendingShot(MovementPlayer *player, AntiAimPlayerData &data, int currentTick);

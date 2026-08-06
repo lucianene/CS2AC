@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 CConVar<bool> cs2ac_silentaim_debug("cs2ac_silentaim_debug", FCVAR_NONE, "Show why Silentaim accepts or rejects each matched shot", false);
 
@@ -181,7 +182,7 @@ namespace detection
 											: 2)
 						   + static_cast<int>(shot.headshot) + 2 * static_cast<int>(shot.wallbang) + 2 * static_cast<int>(shot.throughSmoke)
 						   + static_cast<int>(noscope);
-		incidents.push_back({now, points});
+		incidents.push_back({now, points, points});
 
 		int total = 0;
 		for (const auto &incident : incidents)
@@ -230,19 +231,38 @@ namespace detection
 				{
 					addWeightSentence("evidence.silentaim.weight.noscope", "A no-scope added 1 point.");
 				}
+				int earlierPoints = 0;
+				int earlierOriginalPoints = 0;
+				for (auto incident = incidents.begin(); incident != std::prev(incidents.end()); ++incident)
+				{
+					earlierPoints += incident->points;
+					earlierOriginalPoints += incident->originalPoints;
+				}
+				const size_t earlierCount = incidents.size() - 1;
 				auto formatEvidence = [&](const std::string &weight)
 				{
-					return localization::Format(
-						"evidence.silentaim",
-						"The bullet landed {deviation} degrees away from the player's visible aim. The weapon's current inaccuracy and "
-						"spread allowed {allowance} degrees, leaving {excess} degrees unexplained. {weight} The rolling score reached "
-						"{score}/{threshold}.",
-						{{"deviation", tfm::format("%.2f", shot.silentDeviation)},
-						 {"allowance", tfm::format("%.2f", shot.silentAllowance)},
-						 {"excess", tfm::format("%.2f", excess)},
-						 {"weight", weight},
-						 {"score", tfm::format("%d", total)},
-						 {"threshold", tfm::format("%d", detectionScore)}});
+					const localization::Arguments values {{"earlier_count", tfm::format("%zu", earlierCount)},
+														  {"earlier_points", tfm::format("%d", earlierPoints)},
+														  {"decay", tfm::format("%d", earlierOriginalPoints - earlierPoints)},
+														  {"deviation", tfm::format("%.2f", shot.silentDeviation)},
+														  {"allowance", tfm::format("%.2f", shot.silentAllowance)},
+														  {"excess", tfm::format("%.2f", excess)},
+														  {"weight", weight},
+														  {"score", tfm::format("%d", total)},
+														  {"threshold", tfm::format("%d", detectionScore)}};
+					return earlierCount
+							   ? localization::Format(
+									 "evidence.silentaim",
+									 "Earlier evidence came from {earlier_count} other suspicious damaging shots. They still contributed "
+									 "{earlier_points} points after normal hits removed {decay}. Latest: the bullet landed {deviation} degrees "
+									 "from the visible aim; weapon spread allowed {allowance}, leaving {excess} unexplained. {weight} Score: "
+									 "{score}/{threshold} within five minutes.",
+									 values)
+							   : localization::Format(
+									 "evidence.silentaim.single",
+									 "This damaging shot landed {deviation} degrees from the visible aim. Weapon spread allowed {allowance}, "
+									 "leaving {excess} degrees unexplained. {weight} Score: {score}/{threshold}.",
+									 values);
 				};
 				const auto englishEvidence = formatEvidence(weightDetails.english);
 				const auto localizedEvidence = formatEvidence(weightDetails.localized);

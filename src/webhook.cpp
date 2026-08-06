@@ -6,6 +6,7 @@
 #include "utils/utils.h"
 #include "version_gen.h"
 
+#include <algorithm>
 #include <charconv>
 #include <ctime>
 #include <iomanip>
@@ -75,17 +76,49 @@ namespace
 		return result;
 	}
 
+	constexpr std::size_t Utf8Characters(std::string_view value)
+	{
+		std::size_t result = 0;
+		for (const unsigned char character : value)
+		{
+			result += (character & 0xc0) != 0x80;
+		}
+		return result;
+	}
+
+	constexpr std::size_t Utf8PrefixBytes(std::string_view value, std::size_t maximumCharacters)
+	{
+		std::size_t characters = 0;
+		for (std::size_t byte = 0; byte < value.size(); ++byte)
+		{
+			if ((static_cast<unsigned char>(value[byte]) & 0xc0) != 0x80 && characters++ == maximumCharacters)
+			{
+				return byte;
+			}
+		}
+		return value.size();
+	}
+
+	static_assert(Utf8Characters("A\xc3\xbc"
+								 "B")
+				  == 3);
+	static_assert(Utf8PrefixBytes("A\xc3\xbc"
+								  "B",
+								  2)
+				  == 3);
+
 	std::string Limit(std::string value, std::size_t maximum)
 	{
-		if (value.size() <= maximum)
+		const std::size_t characters = Utf8Characters(value);
+		if (characters <= maximum)
 		{
 			return value;
 		}
-		value.resize(maximum - 3);
-		while (!value.empty() && (static_cast<unsigned char>(value.back()) & 0xc0) == 0x80)
+		if (maximum <= 3)
 		{
-			value.pop_back();
+			return std::string(maximum, '.');
 		}
+		value.resize(Utf8PrefixBytes(value, maximum - 3));
 		value += "...";
 		return value;
 	}

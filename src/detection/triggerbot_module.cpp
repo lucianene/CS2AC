@@ -116,26 +116,33 @@ namespace
 		return mode == detection::TriggerContactMode::AimDriven ? "aim moved onto target" : "held angle / target entered aim";
 	}
 
-	const char *HitGroupName(int group)
+	localization::Text ContactModeText(detection::TriggerContactMode mode)
+	{
+		return mode == detection::TriggerContactMode::AimDriven
+				   ? localization::Format("evidence.triggerbot.context.aim_driven", "the aim moved onto the target")
+				   : localization::Format("evidence.triggerbot.context.target_driven", "the player held an angle and the target entered the aim");
+	}
+
+	localization::Text HitGroupText(int group)
 	{
 		switch (group)
 		{
 			case HITGROUP_HEAD:
-				return "head";
+				return localization::Format("evidence.triggerbot.hitgroup.head", "head");
 			case HITGROUP_CHEST:
-				return "chest";
+				return localization::Format("evidence.triggerbot.hitgroup.chest", "chest");
 			case HITGROUP_STOMACH:
-				return "stomach";
+				return localization::Format("evidence.triggerbot.hitgroup.stomach", "stomach");
 			case HITGROUP_LEFTARM:
 			case HITGROUP_RIGHTARM:
-				return "arm";
+				return localization::Format("evidence.triggerbot.hitgroup.arm", "arm");
 			case HITGROUP_LEFTLEG:
 			case HITGROUP_RIGHTLEG:
-				return "leg";
+				return localization::Format("evidence.triggerbot.hitgroup.leg", "leg");
 			case HITGROUP_NECK:
-				return "neck";
+				return localization::Format("evidence.triggerbot.hitgroup.neck", "neck");
 			default:
-				return "body";
+				return localization::Format("evidence.triggerbot.hitgroup.body", "body");
 		}
 	}
 
@@ -419,24 +426,31 @@ namespace detection
 			return;
 		}
 
-		announce("TRIGGERBOT", attacker,
-				 localization::Format(
-					 "evidence.triggerbot",
-					 "The player repeatedly fired almost immediately after the crosshair first touched an enemy. Across {shots} damaging "
-					 "shots, {one_tick} were fired within one game update, {two_tick} within two updates, and {normal} took three or more "
-					 "updates, bringing the score to {score}/{threshold}. The latest shot took {latest_ticks} updates, dealt {damage} "
-					 "damage to the enemy's {hitgroup}, and happened while {context}; the target was player slot {target}.",
-					 {{"shots", tfm::format("%zu", data.history.size())},
-					  {"score", tfm::format("%d", score.score)},
-					  {"threshold", tfm::format("%d", detectionThreshold)},
-					  {"one_tick", tfm::format("%d", score.oneTickCount)},
-					  {"two_tick", tfm::format("%d", score.twoTickCount)},
-					  {"normal", tfm::format("%d", score.normalCount)},
-					  {"latest_ticks", tfm::format("%d", candidate.reactionTicks)},
-					  {"damage", tfm::format("%d", damage)},
-					  {"context", ContactModeName(candidate.mode)},
-					  {"hitgroup", HitGroupName(event->GetInt("hitgroup", HITGROUP_GENERIC))},
-					  {"target", tfm::format("%d", candidate.targetIndex)}}));
+		const auto context = ContactModeText(candidate.mode);
+		const auto hitgroup = HitGroupText(event->GetInt("hitgroup", HITGROUP_GENERIC));
+		auto formatEvidence = [&](const std::string &contextText, const std::string &hitgroupText)
+		{
+			return localization::Format(
+				"evidence.triggerbot",
+				"Within five minutes, {shots} damaging shots followed fresh enemy contact. Only reactions within one game update add "
+				"evidence: {one_tick} did so (+2 each). Slower reactions reduce the score: {two_tick} took two updates and {normal} "
+				"took three or more (-3 each). Latest: {latest_ticks} updates, {damage} damage to the {hitgroup}, while {context}; "
+				"target slot {target}. Score: {score}/{threshold}.",
+				{{"shots", tfm::format("%zu", data.history.size())},
+				 {"score", tfm::format("%d", score.score)},
+				 {"threshold", tfm::format("%d", detectionThreshold)},
+				 {"one_tick", tfm::format("%d", score.oneTickCount)},
+				 {"two_tick", tfm::format("%d", score.twoTickCount)},
+				 {"normal", tfm::format("%d", score.normalCount)},
+				 {"latest_ticks", tfm::format("%d", candidate.reactionTicks)},
+				 {"damage", tfm::format("%d", damage)},
+				 {"context", contextText},
+				 {"hitgroup", hitgroupText},
+				 {"target", tfm::format("%d", candidate.targetIndex)}});
+		};
+		const auto englishEvidence = formatEvidence(context.english, hitgroup.english);
+		const auto localizedEvidence = formatEvidence(context.localized, hitgroup.localized);
+		announce("TRIGGERBOT", attacker, {englishEvidence.english, localizedEvidence.localized});
 		data.history.clear();
 	}
 

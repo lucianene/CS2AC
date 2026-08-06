@@ -566,11 +566,12 @@ namespace detection
 				announce("AIMLOCK", player,
 						 localization::Format(
 							 "evidence.aimlock",
-							 "CS2AC found {incidents} separate periods of near-perfect enemy tracking. During the latest two-second period, "
-							 "the aim stayed inside the enemy's body width for {precise} of {samples} checks while the enemy moved far enough "
-							 "across the player's view. The enemy moved {movement} degrees across the view; {required} degrees was required at "
-							 "that distance.",
+							 "Within five minutes, CS2AC found {incidents} separate two-second periods of near-perfect enemy tracking. "
+							 "Latest: the aim stayed inside the enemy's body width for {precise} of {samples} checks while the enemy moved "
+							 "{movement} degrees across the player's view; {required} degrees was required at that distance. Evidence: "
+							 "{incidents}/{threshold}.",
 							 {{"incidents", tfm::format("%zu", incidents.size())},
+							  {"threshold", tfm::format("%d", detectionThreshold)},
 							  {"precise", tfm::format("%d", hypothesis.onTargetSamples)},
 							  {"samples", tfm::format("%d", data.track.samples)},
 							  {"movement", tfm::format("%.1f", hypothesis.maximumTargetDisplacement)},

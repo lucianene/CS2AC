@@ -11,6 +11,7 @@ languages = {
 }
 entry = re.compile(r'^\s*"([^"\\]+)"\s+"((?:\\.|[^"\\])*)"\s*$')
 placeholder = re.compile(r"\{[A-Za-z0-9_.]+\}")
+evidence_template_limit = 700  # Discord allows 1024 characters; dynamic values need the remaining space.
 
 
 def load(path: Path) -> dict[str, str]:
@@ -67,5 +68,7 @@ for path in sorted(root.glob("*.txt")):
     for key, value in phrases.items():
         if set(placeholder.findall(value)) != set(placeholder.findall(english[key])):
             raise ValueError(f"{path}: placeholders differ for {key}")
+        if key.startswith("evidence.") and len(value) > evidence_template_limit:
+            raise ValueError(f"{path}: {key} is too long for a readable Discord evidence field")
 
 print(f"Checked {len(files)} languages with {len(english)} phrases each.")
