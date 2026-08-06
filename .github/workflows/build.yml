@@ -112,4 +112,8 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --verify-tag --title "CS2AC ${GITHUB_REF_NAME#v}" --notes "CS2AC is free and independently maintained. If it helps your server, even a small one-time or monthly contribution helps me keep up with CS2 updates, testing, Windows and Linux builds, report investigation, and community support: https://buymeacoffee.com/karola3vax" --generate-notes
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --verify-tag
+          --title "CS2AC ${GITHUB_REF_NAME#v}"
+          --notes "CS2AC is free and independently maintained. If it helps your server, please consider supporting the hard work behind CS2 updates, testing, Windows and Linux builds, report investigation, and community support: https://buymeacoffee.com/karola3vax"
+          --generate-notes
