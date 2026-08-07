@@ -2,6 +2,8 @@
 
 <img src="docs/cs2ac-logo.png" width="760" alt="CS2AC">
 
+<a href="https://buymeacoffee.com/karola3vax"><img src="docs/buymeacoffee-banner.png" width="760" alt="Support continued CS2AC development"></a>
+
 ### Open-source server-side anti-cheat for Counter-Strike 2.
 
 [![Modules](https://img.shields.io/badge/modules-18-6f42c1?style=for-the-badge)](#detection-modules)
