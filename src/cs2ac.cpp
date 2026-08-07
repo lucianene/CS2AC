@@ -835,7 +835,9 @@ void CS2ACPlugin::PrintConfigSummary(bool reloaded) const
 		settings::GetPunishmentCommand() && *settings::GetPunishmentCommand() ? "configured" : "disabled",
 		settings::GetKickCommand() && *settings::GetKickCommand() ? "configured" : "disabled");
 	Msg("[CS2AC] Discord webhook: %s.\n",
-		webhook && webhook->IsConfigured() ? (webhook->IsDisabled() ? "disabled after an error" : "configured") : "not configured");
+		webhook && webhook->IsDiscordConfigured() ? (webhook->IsDiscordDisabled() ? "disabled after an error" : "configured") : "not configured");
+	Msg("[CS2AC] JSON webhook: %s.\n",
+		webhook && webhook->IsJsonConfigured() ? (webhook->IsJsonDisabled() ? "disabled after an error" : "configured") : "not configured");
 }
 
 void CS2ACPlugin::PrintHelp() const
@@ -845,7 +847,7 @@ void CS2ACPlugin::PrintHelp() const
 	Msg("[CS2AC] cs2ac_reload - Reload cs2ac.cfg and clear transient detector evidence when it finishes.\n");
 	Msg("[CS2AC] cs2ac_check_config - Check the current settings without changing them.\n");
 	Msg("[CS2AC] cs2ac_test_announcement - Show a harmless chat and center-screen test without punishing anyone.\n");
-	Msg("[CS2AC] cs2ac_webhook_test - Send a harmless Discord test report.\n");
+	Msg("[CS2AC] cs2ac_webhook_test - Send a harmless test report to each configured webhook.\n");
 }
 
 void CS2ACPlugin::ReloadConfig()
@@ -920,6 +922,16 @@ void CS2ACPlugin::CheckConfig() const
 	if (!WebhookService::IsValidUrl(settings::GetWebhookUrl()))
 	{
 		Msg("[CS2AC] Review cs2ac_webhook_url: it is not a Discord webhook URL.\n");
+		++findings;
+	}
+	if (!WebhookService::IsValidJsonUrl(settings::GetJsonWebhookUrl()))
+	{
+		Msg("[CS2AC] Review cs2ac_json_webhook_url: it must be an HTTPS URL.\n");
+		++findings;
+	}
+	if (!WebhookService::IsValidBearerToken(settings::GetJsonWebhookBearerToken()))
+	{
+		Msg("[CS2AC] Review cs2ac_json_webhook_bearer_token: it must not contain whitespace and must be 4096 characters or shorter.\n");
 		++findings;
 	}
 	if (!WebhookService::IsValidRoleId(settings::GetWebhookRoleId()))
@@ -1042,8 +1054,10 @@ void CS2ACPlugin::PrintStatus() const
 		settings::GetKickCommand() && *settings::GetKickCommand() ? "configured" : "disabled");
 	const size_t webhookQueueSize = webhook ? webhook->QueueSize() : 0;
 	Msg("[CS2AC] Discord webhook: %s, %zu queued report%s.\n",
-		webhook && webhook->IsConfigured() ? (webhook->IsDisabled() ? "disabled after an error" : "configured") : "not configured", webhookQueueSize,
+		webhook && webhook->IsDiscordConfigured() ? (webhook->IsDiscordDisabled() ? "disabled after an error" : "configured") : "not configured", webhookQueueSize,
 		webhookQueueSize == 1 ? "" : "s");
+	Msg("[CS2AC] JSON webhook: %s.\n",
+		webhook && webhook->IsJsonConfigured() ? (webhook->IsJsonDisabled() ? "disabled after an error" : "configured") : "not configured");
 	Msg("[CS2AC] sv_cheats testing: %s.\n", MovementDetectionService::IsSvCheatsTestingAllowed() ? "allowed" : "not allowed");
 	Msg("[CS2AC] Support continued CS2AC development: buymeacoffee.com/karola3vax\n");
 }

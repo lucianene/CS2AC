@@ -326,6 +326,8 @@ The included [`cs2ac.cfg`](cfg/cs2ac.cfg) explains every option in plain languag
 | `cs2ac_punishment_command` | `css_addban ...` | Command submitted for permanent-ban detections. |
 | `cs2ac_kick_command` | `css_kick ...` | Command submitted for kick-only detections. |
 | `cs2ac_webhook_url` | empty | Discord webhook that receives detection reports. |
+| `cs2ac_json_webhook_url` | empty | Optional HTTPS endpoint that receives neutral JSON detection reports. |
+| `cs2ac_json_webhook_bearer_token` | empty | Optional bearer token sent to the JSON endpoint. |
 | `cs2ac_webhook_role_id` | empty | Discord role to mention on a report. |
 | `cs2ac_webhook_server_address` | automatic | Server address shown in Discord. |
 | `cs2ac_webhook_logo_url` | empty | Override the default CS2AC image shown in Discord reports. |
@@ -363,6 +365,20 @@ Keep the webhook URL private. CS2AC never prints it back to the console.
 </details>
 
 <details>
+<summary><strong>Generic JSON webhooks</strong></summary>
+
+1. Put your HTTPS endpoint in `cs2ac_json_webhook_url`.
+2. Optionally set `cs2ac_json_webhook_bearer_token` for `Authorization: Bearer ...` authentication.
+3. Run `cs2ac_reload`.
+4. Run `cs2ac_webhook_test` to send a harmless test event.
+
+CS2AC can send to Discord and the JSON endpoint at the same time. JSON reports are sent in the background, retry temporary failures once, and treat any HTTP `2xx` response as success. Responses from the endpoint are never executed as commands; punishment remains controlled locally by CS2AC.
+
+Each event contains `type`, `version`, `steamid64`, `player`, `detection`, `evidence`, `outcome`, `map`, `server`, `server_address`, `timestamp`, and `plugin_version`.
+
+</details>
+
+<details>
 <summary><strong>Server commands</strong></summary>
 
 | Command | What it does |
@@ -372,7 +388,7 @@ Keep the webhook URL private. CS2AC never prints it back to the console.
 | `cs2ac_reload` | Reload `cs2ac.cfg`. |
 | `cs2ac_check_config` | Find mistakes in the current configuration. |
 | `cs2ac_test_announcement` | Preview the chat and center-screen alert without detecting anyone. |
-| `cs2ac_webhook_test` | Send a test detection report to Discord. |
+| `cs2ac_webhook_test` | Send a test detection report to each configured webhook. |
 
 </details>
 
