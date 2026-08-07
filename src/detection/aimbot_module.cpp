@@ -517,7 +517,10 @@ namespace detection
 		purge(snapIncidents);
 		purge(smoothIncidents);
 		auto &incidents = matchedRule == AimbotRule::SmoothConvergence ? smoothIncidents : snapIncidents;
-		incidents.push_back({now, matchedRule == AimbotRule::SnapReturn});
+		const AimbotEvidenceType evidenceType = matchedRule == AimbotRule::SnapReturn          ? AimbotEvidenceType::SnapReturn
+												: matchedRule == AimbotRule::SmoothConvergence ? AimbotEvidenceType::SmoothConvergence
+																							   : AimbotEvidenceType::Convergence;
+		incidents.push_back({now, evidenceType, largestSnap, bestBefore, bestAfter});
 		const int threshold = matchedRule == AimbotRule::SmoothConvergence ? smoothDetectionThreshold : snapDetectionThreshold;
 		if (matchedRule == AimbotRule::SmoothConvergence)
 		{
@@ -539,38 +542,53 @@ namespace detection
 		{
 			if (announce)
 			{
-				const auto snapReturns = static_cast<int>(
-					std::count_if(snapIncidents.begin(), snapIncidents.end(), [](const AimbotIncident &incident) { return incident.snapReturn; }));
-				const auto values =
-					localization::Arguments {{"incidents", tfm::format("%zu", incidents.size())},
-											 {"threshold", tfm::format("%d", threshold)},
-											 {"returns", tfm::format("%d", snapReturns)},
-											 {"convergences", tfm::format("%zu", snapIncidents.size() - static_cast<size_t>(snapReturns))},
-											 {"snap", tfm::format("%.2f", largestSnap)},
-											 {"before", tfm::format("%.2f", bestBefore)},
-											 {"after", tfm::format("%.2f", bestAfter)}};
-				const localization::Text details =
+				std::vector<localization::Text> history;
+				for (size_t index = 0; index + 1 < incidents.size(); ++index)
+				{
+					const auto &incident = incidents[index];
+					switch (incident.type)
+					{
+						case AimbotEvidenceType::SnapReturn:
+							history.push_back(localization::Format("evidence.aimbot.snap_return", "{movement}° snap-return",
+																   {{"movement", tfm::format("%.2f", incident.movement)}}));
+							break;
+						case AimbotEvidenceType::SmoothConvergence:
+							history.push_back(localization::Format("evidence.aimbot.smooth", "{movement}° smooth move ({before}°→{after}°)",
+																   {{"movement", tfm::format("%.2f", incident.movement)},
+																	{"before", tfm::format("%.2f", incident.before)},
+																	{"after", tfm::format("%.2f", incident.after)}}));
+							break;
+						case AimbotEvidenceType::Convergence:
+							history.push_back(localization::Format("evidence.aimbot.convergence", "{movement}° sudden move ({before}°→{after}°)",
+																   {{"movement", tfm::format("%.2f", incident.movement)},
+																	{"before", tfm::format("%.2f", incident.before)},
+																	{"after", tfm::format("%.2f", incident.after)}}));
+							break;
+					}
+				}
+				const auto values = localization::Arguments {{"incidents", tfm::format("%zu", incidents.size())},
+															 {"threshold", tfm::format("%d", threshold)},
+															 {"snap", tfm::format("%.2f", largestSnap)},
+															 {"before", tfm::format("%.2f", bestBefore)},
+															 {"after", tfm::format("%.2f", bestAfter)}};
+				const localization::Text latest =
 					matchedRule == AimbotRule::SnapReturn
-						? localization::Format(
-							  "evidence.aimbot.snap_return",
-							  "Within five minutes, {incidents} damaging shots had suspicious aim movement: {returns} snap-return and "
-							  "{convergences} sudden movement onto an enemy. Latest: the aim jumped {snap} degrees during the shot and "
-							  "immediately returned. Evidence: {incidents}/{threshold}.",
-							  values)
+						? localization::Format("evidence.aimbot.latest.snap_return",
+											   "During the latest damaging shot, the aim jumped {snap} degrees and immediately returned. Evidence: "
+											   "{incidents}/{threshold} within five minutes.",
+											   values)
 					: matchedRule == AimbotRule::SmoothConvergence
 						? localization::Format(
-							  "evidence.aimbot.smooth",
-							  "Within five minutes, {incidents} damaging shots followed unusually clean aim curves onto an enemy. Latest: "
-							  "the aim moved {snap} degrees and its distance from the enemy fell from {before} to {after} degrees. Evidence: "
-							  "{incidents}/{threshold}.",
+							  "evidence.aimbot.latest.smooth",
+							  "During the latest damaging shot, the aim followed an unusually clean {snap} degree curve and its distance "
+							  "from the enemy fell from {before} to {after} degrees. Evidence: {incidents}/{threshold} within five minutes.",
 							  values)
 						: localization::Format(
-							  "evidence.aimbot.convergence",
-							  "Within five minutes, {incidents} damaging shots had suspicious aim movement: {returns} snap-return and "
-							  "{convergences} sudden movement onto an enemy. Latest: the aim moved {snap} degrees in one step and its "
-							  "distance from the enemy fell from {before} to {after} degrees. Evidence: {incidents}/{threshold}.",
+							  "evidence.aimbot.latest.convergence",
+							  "During the latest damaging shot, the aim moved {snap} degrees in one step and its distance from the enemy "
+							  "fell from {before} to {after} degrees. Evidence: {incidents}/{threshold} within five minutes.",
 							  values);
-				announce("AIMBOT", attacker, details);
+				announce("AIMBOT", attacker, FormatEvidenceHistory(history, latest));
 			}
 			snapIncidents.clear();
 			smoothIncidents.clear();

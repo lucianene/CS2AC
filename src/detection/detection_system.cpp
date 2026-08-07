@@ -35,6 +35,36 @@ namespace
 
 namespace detection
 {
+	localization::Text FormatEvidenceHistory(const std::vector<localization::Text> &history, const localization::Text &latest)
+	{
+		if (history.empty())
+		{
+			return latest;
+		}
+
+		constexpr size_t visibleHistoryLimit = 5;
+		const size_t first = history.size() > visibleHistoryLimit ? history.size() - visibleHistoryLimit : 0;
+		localization::Text lines;
+		for (size_t index = first; index < history.size(); ++index)
+		{
+			const std::string prefix = tfm::format("%zu. ", index - first + 1);
+			const char *separator = lines.english.empty() ? "" : "\n";
+			lines = {lines.english + separator + prefix + history[index].english, lines.localized + separator + prefix + history[index].localized};
+		}
+
+		const auto previous = localization::Format("evidence.history.previous", "Previous evidence:");
+		const auto latestLabel = localization::Format("evidence.history.latest", "Latest:");
+		localization::Text older;
+		if (first > 0)
+		{
+			older = localization::Format("evidence.history.older", "+{count} older incidents.", {{"count", tfm::format("%zu", first)}});
+		}
+		return {previous.english + "\n" + lines.english + (older.english.empty() ? "" : "\n" + older.english) + "\n\n" + latestLabel.english + " "
+					+ latest.english,
+				previous.localized + "\n" + lines.localized + (older.localized.empty() ? "" : "\n" + older.localized) + "\n\n" + latestLabel.localized
+					+ " " + latest.localized};
+	}
+
 	std::string_view NormalizeWeapon(std::string_view weapon)
 	{
 		if (weapon.rfind("weapon_", 0) == 0)

@@ -406,7 +406,7 @@ namespace detection
 		{
 			data.history.pop_front();
 		}
-		data.history.push_back({now, candidate.reactionTicks});
+		data.history.push_back({now, candidate.reactionTicks, candidate.mode});
 		while (data.history.size() > historyLimit)
 		{
 			data.history.pop_front();
@@ -428,20 +428,30 @@ namespace detection
 
 		const auto context = ContactModeText(candidate.mode);
 		const auto hitgroup = HitGroupText(event->GetInt("hitgroup", HITGROUP_GENERIC));
+		std::vector<localization::Text> history;
+		for (size_t index = 0; index + 1 < data.history.size(); ++index)
+		{
+			const auto &incident = data.history[index];
+			const auto incidentContext = ContactModeText(incident.mode);
+			const int points = incident.reactionTicks >= 0 && incident.reactionTicks <= 1 ? 2 : -3;
+			auto formatLine = [&](const std::string &contextText)
+			{
+				return localization::Format(
+					"evidence.triggerbot", "{ticks} ticks - {context} - {points}",
+					{{"ticks", tfm::format("%d", incident.reactionTicks)}, {"context", contextText}, {"points", tfm::format("%+d", points)}});
+			};
+			const auto englishLine = formatLine(incidentContext.english);
+			const auto localizedLine = formatLine(incidentContext.localized);
+			history.push_back({englishLine.english, localizedLine.localized});
+		}
 		auto formatEvidence = [&](const std::string &contextText, const std::string &hitgroupText)
 		{
 			return localization::Format(
-				"evidence.triggerbot",
-				"Within five minutes, {shots} damaging shots followed fresh enemy contact. Only reactions within one game update add "
-				"evidence: {one_tick} did so (+2 each). Slower reactions reduce the score: {two_tick} took two updates and {normal} "
-				"took three or more (-3 each). Latest: {latest_ticks} updates, {damage} damage to the {hitgroup}, while {context}; "
-				"target slot {target}. Score: {score}/{threshold}.",
-				{{"shots", tfm::format("%zu", data.history.size())},
-				 {"score", tfm::format("%d", score.score)},
+				"evidence.triggerbot.latest",
+				"The player dealt {damage} damage to the target's {hitgroup} {latest_ticks} game-update intervals after fresh contact, while "
+				"{context}; the target was player slot {target}. Score: {score}/{threshold} within five minutes.",
+				{{"score", tfm::format("%d", score.score)},
 				 {"threshold", tfm::format("%d", detectionThreshold)},
-				 {"one_tick", tfm::format("%d", score.oneTickCount)},
-				 {"two_tick", tfm::format("%d", score.twoTickCount)},
-				 {"normal", tfm::format("%d", score.normalCount)},
 				 {"latest_ticks", tfm::format("%d", candidate.reactionTicks)},
 				 {"damage", tfm::format("%d", damage)},
 				 {"context", contextText},
@@ -450,7 +460,7 @@ namespace detection
 		};
 		const auto englishEvidence = formatEvidence(context.english, hitgroup.english);
 		const auto localizedEvidence = formatEvidence(context.localized, hitgroup.localized);
-		announce("TRIGGERBOT", attacker, {englishEvidence.english, localizedEvidence.localized});
+		announce("TRIGGERBOT", attacker, FormatEvidenceHistory(history, {englishEvidence.english, localizedEvidence.localized}));
 		data.history.clear();
 	}
 

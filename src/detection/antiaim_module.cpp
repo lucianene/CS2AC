@@ -97,9 +97,10 @@ namespace
 		return {"unknown behavior", "unknown behavior"};
 	}
 
-	localization::Text EarlierAntiAimEvidence(const detection::AntiAimPlayerData &data, detection::AntiAimEvidenceType latestType, float latestWeight)
+	std::vector<localization::Text> EarlierAntiAimEvidence(const detection::AntiAimPlayerData &data, detection::AntiAimEvidenceType latestType,
+														   float latestWeight)
 	{
-		localization::Text result;
+		std::vector<localization::Text> result;
 		for (size_t index = 0; index < static_cast<size_t>(detection::AntiAimEvidenceType::Count); ++index)
 		{
 			const auto type = static_cast<detection::AntiAimEvidenceType>(index);
@@ -117,8 +118,7 @@ namespace
 			};
 			const auto english = entry(category.english);
 			const auto localized = entry(category.localized);
-			const char *separator = result.english.empty() ? "" : ", ";
-			result = {result.english + separator + english.english, result.localized + separator + localized.localized};
+			result.push_back({english.english, localized.localized});
 		}
 		return result;
 	}
@@ -231,10 +231,9 @@ namespace detection
 		{
 			const std::string localizedReason = localization::Get(reasonKey, reason);
 			const auto earlier = EarlierAntiAimEvidence(data, type, weight);
-			auto formatDetails = [&](const std::string &earlierText, const std::string &latestReason)
+			auto formatDetails = [&](const std::string &latestReason)
 			{
-				const localization::Arguments values {{"earlier", earlierText},
-													  {"remaining", tfm::format("%.1f", previousTotal)},
+				const localization::Arguments values {{"remaining", tfm::format("%.1f", previousTotal)},
 													  {"reason", latestReason},
 													  {"points", tfm::format("%.1f", weight)},
 													  {"score", tfm::format("%.1f", total)},
@@ -242,16 +241,16 @@ namespace detection
 				return previousTotal > 0.05f
 						   ? localization::Format(
 								 "evidence.antiaim",
-								 "Earlier AntiAim behavior: {earlier}. After normal decay, {remaining} points remained. Latest: {reason}, adding "
-								 "{points} points. Score: {score}/{threshold}.",
+								 "The latest behavior was {reason}, adding {points} points. Earlier behavior had decayed to {remaining} points, "
+								 "bringing the score to {score}/{threshold}.",
 								 values)
 						   : localization::Format("evidence.antiaim.single",
 												  "The detector found {reason}. This added {points} points by itself. Score: {score}/{threshold}.",
 												  values);
 			};
-			const auto englishDetails = formatDetails(earlier.english, reason);
-			const auto localizedDetails = formatDetails(earlier.localized, localizedReason);
-			localization::Text details {englishDetails.english, localizedDetails.localized};
+			const auto englishDetails = formatDetails(reason);
+			const auto localizedDetails = formatDetails(localizedReason);
+			localization::Text details = FormatEvidenceHistory(earlier, {englishDetails.english, localizedDetails.localized});
 			// m_yaw is evidence-only context for reviewing high-value turn binds; it never changes the score or punishment.
 			const char *mYaw = interfaces::pEngine ? interfaces::pEngine->GetClientConVarValue(player->GetPlayerSlot(), "m_yaw") : nullptr;
 			if (utils::IsNumeric(mYaw))

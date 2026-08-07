@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iterator>
 
 CConVar<bool> cs2ac_silentaim_debug("cs2ac_silentaim_debug", FCVAR_NONE, "Show why Silentaim accepts or rejects each matched shot", false);
 
@@ -182,7 +181,10 @@ namespace detection
 											: 2)
 						   + static_cast<int>(shot.headshot) + 2 * static_cast<int>(shot.wallbang) + 2 * static_cast<int>(shot.throughSmoke)
 						   + static_cast<int>(noscope);
-		incidents.push_back({now, points, points});
+		const SilentEvidenceContext context = blatant         ? SilentEvidenceContext::Blatant
+											  : shot.airborne ? SilentEvidenceContext::Airborne
+															  : SilentEvidenceContext::Grounded;
+		incidents.push_back({now, points, points, excess, context});
 
 		int total = 0;
 		for (const auto &incident : incidents)
@@ -231,42 +233,47 @@ namespace detection
 				{
 					addWeightSentence("evidence.silentaim.weight.noscope", "A no-scope added 1 point.");
 				}
-				int earlierPoints = 0;
-				int earlierOriginalPoints = 0;
-				for (auto incident = incidents.begin(); incident != std::prev(incidents.end()); ++incident)
-				{
-					earlierPoints += incident->points;
-					earlierOriginalPoints += incident->originalPoints;
-				}
-				const size_t earlierCount = incidents.size() - 1;
 				auto formatEvidence = [&](const std::string &weight)
 				{
-					const localization::Arguments values {{"earlier_count", tfm::format("%zu", earlierCount)},
-														  {"earlier_points", tfm::format("%d", earlierPoints)},
-														  {"decay", tfm::format("%d", earlierOriginalPoints - earlierPoints)},
-														  {"deviation", tfm::format("%.2f", shot.silentDeviation)},
+					const localization::Arguments values {{"deviation", tfm::format("%.2f", shot.silentDeviation)},
 														  {"allowance", tfm::format("%.2f", shot.silentAllowance)},
 														  {"excess", tfm::format("%.2f", excess)},
 														  {"weight", weight},
 														  {"score", tfm::format("%d", total)},
 														  {"threshold", tfm::format("%d", detectionScore)}};
-					return earlierCount
-							   ? localization::Format(
-									 "evidence.silentaim",
-									 "Earlier evidence came from {earlier_count} other suspicious damaging shots. They still contributed "
-									 "{earlier_points} points after normal hits removed {decay}. Latest: the bullet landed {deviation} degrees "
-									 "from the visible aim; weapon spread allowed {allowance}, leaving {excess} unexplained. {weight} Score: "
-									 "{score}/{threshold} within five minutes.",
-									 values)
-							   : localization::Format(
-									 "evidence.silentaim.single",
-									 "This damaging shot landed {deviation} degrees from the visible aim. Weapon spread allowed {allowance}, "
-									 "leaving {excess} degrees unexplained. {weight} Score: {score}/{threshold}.",
-									 values);
+					return localization::Format(
+						"evidence.silentaim.single",
+						"This damaging shot landed {deviation} degrees from the visible aim. Weapon spread allowed {allowance}, "
+						"leaving {excess} degrees unexplained. {weight} Score: {score}/{threshold}.",
+						values);
 				};
+				std::vector<localization::Text> history;
+				for (size_t index = 0; index + 1 < incidents.size(); ++index)
+				{
+					const auto &incident = incidents[index];
+					const auto contextText = incident.context == SilentEvidenceContext::Blatant
+												 ? localization::Format("evidence.silentaim.context.blatant", "over 22.5 degrees")
+											 : incident.context == SilentEvidenceContext::Airborne
+												 ? localization::Format("evidence.silentaim.context.airborne", "airborne")
+												 : localization::Format("evidence.silentaim.context.grounded", "grounded");
+					const auto pointsText = incident.points == incident.originalPoints
+												? localization::Text {tfm::format("+%d", incident.points), tfm::format("+%d", incident.points)}
+												: localization::Format("evidence.history.decayed_points", "+{remaining} remaining from +{original}",
+																	   {{"remaining", tfm::format("%d", incident.points)},
+																		{"original", tfm::format("%d", incident.originalPoints)}});
+					auto formatLine = [&](const std::string &contextValue, const std::string &pointsValue)
+					{
+						return localization::Format(
+							"evidence.silentaim", "{degrees}° unexplained - {context} - {points}",
+							{{"degrees", tfm::format("%.2f", incident.unexplainedDegrees)}, {"context", contextValue}, {"points", pointsValue}});
+					};
+					const auto englishLine = formatLine(contextText.english, pointsText.english);
+					const auto localizedLine = formatLine(contextText.localized, pointsText.localized);
+					history.push_back({englishLine.english, localizedLine.localized});
+				}
 				const auto englishEvidence = formatEvidence(weightDetails.english);
 				const auto localizedEvidence = formatEvidence(weightDetails.localized);
-				announce("SILENTAIM", player, {englishEvidence.english, localizedEvidence.localized});
+				announce("SILENTAIM", player, FormatEvidenceHistory(history, {englishEvidence.english, localizedEvidence.localized}));
 			}
 			incidents.clear();
 		}

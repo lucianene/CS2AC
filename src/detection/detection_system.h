@@ -10,6 +10,7 @@
 #include <deque>
 #include <string>
 #include <string_view>
+#include <vector>
 
 class IGameEvent;
 class MovementPlayer;
@@ -29,6 +30,7 @@ namespace detection
 	Vector AimForward(const QAngle &angles);
 	float AngularDistance(const QAngle &first, const QAngle &second);
 	std::string_view NormalizeWeapon(std::string_view weapon);
+	localization::Text FormatEvidenceHistory(const std::vector<localization::Text> &history, const localization::Text &latest);
 
 	struct NetworkSafetyEvidence
 	{
@@ -243,6 +245,7 @@ namespace detection
 	{
 		Clock::time_point time;
 		int reactionTicks {};
+		TriggerContactMode mode {};
 	};
 
 	struct TriggerbotPlayerData
@@ -284,11 +287,20 @@ namespace detection
 		Clock::time_point smokeStateUnknownUntil;
 	};
 
+	enum class SilentEvidenceContext : std::uint8_t
+	{
+		Grounded,
+		Airborne,
+		Blatant,
+	};
+
 	struct SilentIncident
 	{
 		Clock::time_point time;
 		int points {};
 		int originalPoints {};
+		float unexplainedDegrees {};
+		SilentEvidenceContext context {};
 	};
 
 	// Detects damaging shots whose attack-history angle disagrees with the command's base view angle.
@@ -330,10 +342,20 @@ namespace detection
 		bool hasCountedIncident {};
 	};
 
+	enum class AimbotEvidenceType : std::uint8_t
+	{
+		Convergence,
+		SnapReturn,
+		SmoothConvergence,
+	};
+
 	struct AimbotIncident
 	{
 		Clock::time_point time;
-		bool snapReturn {};
+		AimbotEvidenceType type {};
+		float movement {};
+		float before {};
+		float after {};
 	};
 
 	// Detects damaging command-angle snaps that rapidly converge on an enemy.
