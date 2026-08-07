@@ -1,6 +1,6 @@
 "Phrases"
 {
-	"announcement.support"	"Підтримайте важку працю, що стоїть за цим безкоштовним захистом: {url}"
+	"announcement.support"	"Підтримайте подальший розвиток CS2AC: {url}"
 	"announcement.detected"	"виявив {detection} у гравця {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" і застосував покарання."
 	"announcement.outcome.whitelisted"	", але гравець у білому списку."

@@ -469,7 +469,9 @@ If CS2AC earns a place on your server, star the repository and share your clips.
 
 ## Support development
 
-CS2AC is free and independently maintained. If it helps your server, even a small one-time or monthly contribution helps me keep up with CS2 updates, testing, Windows and Linux builds, report investigation, and community support: [Support development](https://buymeacoffee.com/karola3vax).
+Support continued CS2AC development: [buymeacoffee.com/karola3vax](https://buymeacoffee.com/karola3vax).
+
+CS2AC is free and independently maintained. Even a small one-time or monthly contribution helps me keep up with CS2 updates, testing, Windows and Linux builds, report investigation, and community support.
 
 ## License
 

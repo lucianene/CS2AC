@@ -1,6 +1,6 @@
 "Phrases"
 {
-	"announcement.support"	"Tue tämän ilmaisen suojauksen takana tehtävää kovaa työtä: {url}"
+	"announcement.support"	"Tue CS2AC:n jatkuvaa kehitystä: {url}"
 	"announcement.detected"	"havaitsi {detection}-toiminnan pelaajalla {player}{outcome}"
 	"announcement.outcome.punishment_sent"	" ja suoritti rangaistuksen."
 	"announcement.outcome.whitelisted"	", mutta pelaaja on sallittujen listalla."
